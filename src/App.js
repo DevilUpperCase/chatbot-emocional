@@ -1,23 +1,40 @@
-import logo from './logo.svg';
+import React from 'react'; // No necesitas useEffect aquí ahora
 import './App.css';
+import Header from './components/Header';
+import ChatContainer from './components/ChatContainer';
+import InputArea from './components/InputArea';
+import { useChatbotLogic } from './hooks/useChatbotLogic';
 
 function App() {
+  const {
+    messages,
+    currentEmojiKey,
+    isTyping,
+    isMuted,
+    ttsSupported,
+    highlightedWordInfo,
+    handleSendMessage,
+    handleToggleMute,
+  } = useChatbotLogic();
+
+  // El useEffect que causaba errores ha sido eliminado.
+  // La lógica de inicialización ahora está dentro de useChatbotLogic.
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div className="app-container">
+      <Header
+        currentEmojiKey={currentEmojiKey}
+        isMuted={isMuted}
+        ttsSupported={ttsSupported}
+        onToggleMute={handleToggleMute}
+      />
+      <ChatContainer
+         messages={messages}
+         isTyping={isTyping}
+         highlightedWordInfo={highlightedWordInfo}
+         // No necesitas pasar chatContainerRef aquí
+      />
+      <InputArea onSendMessage={handleSendMessage} />
     </div>
   );
 }
