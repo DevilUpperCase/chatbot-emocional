@@ -1,4 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faPaperPlane } from '@fortawesome/free-solid-svg-icons';
+
 
 function InputArea({ onSendMessage }) {
   const [inputValue, setInputValue] = useState('');
@@ -30,11 +33,11 @@ function InputArea({ onSendMessage }) {
       onSendMessage(inputValue.trim());
       setInputValue('');
       // Reset height after sending
-       setTimeout(() => {
-           if (textareaRef.current) {
-               textareaRef.current.style.height = 'auto';
-           }
-       }, 0);
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.style.height = 'auto';
+        }
+      }, 0);
     }
   };
 
@@ -64,7 +67,8 @@ function InputArea({ onSendMessage }) {
         disabled={isSendDisabled}
         title="Enviar mensaje"
       >
-        <i className="fas fa-paper-plane"></i>
+        <FontAwesomeIcon icon={faPaperPlane} />
+
       </button>
     </div>
   );

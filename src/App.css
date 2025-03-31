@@ -14,7 +14,7 @@ body { background-color: var(--bg-color); color: var(--text-color); height: 100v
 
 /* --- ESTILOS HEADER Y EMOJI MODIFICADOS --- */
 .header {
-  min-height: 400px;
+  min-height: 25%;
   display: flex;
   flex-direction: column; /* Cambiado a columna para poner botón debajo */
   justify-content: center;
@@ -26,10 +26,10 @@ body { background-color: var(--bg-color); color: var(--text-color); height: 100v
   position: relative; /* Para posicionar el botón si fuera necesario */
 }
 .emoji-container { transition: all 0.3s ease; text-align: center; margin-bottom: 10px; /* Espacio para el botón */ }
-.emoji-gif { width: 250px; height: 250px; /* Ligeramente más pequeño */ transition: all 0.3s ease; object-fit: contain; }
+.emoji-gif { width: 200px; height: 200px; /* Ligeramente más pequeño */ transition: all 0.3s ease; object-fit: contain; }
 @media (min-width: 600px) {
-  .emoji-gif { width: 250px; height: 250px; }
-   .header { min-height: 400px; /* Ajustado */ }
+  .emoji-gif { width: 200px; height: 200px; }
+   .header { min-height: 200px; /* Ajustado */ }
 }
 
 /* --- NUEVOS ESTILOS PARA BOTÓN TTS Y RESALTADO --- */
