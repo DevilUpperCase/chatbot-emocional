@@ -20,7 +20,7 @@ RUN npm run build
 FROM nginx:alpine
 
 # Etiqueta para identificar el servicio
-LABEL name="chatbot-emocional"
+LABEL name="n8n-chatbot-emocional"
 LABEL version="1.0"
 
 # Copiar la configuración de nginx
