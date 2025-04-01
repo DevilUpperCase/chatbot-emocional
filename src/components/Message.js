@@ -68,6 +68,10 @@ const Message = React.memo(({ message, highlightedWordInfo }) => {
     return currentSpanIndex;
   }, [isBot, highlightedWordInfo, id, messageParts]);
 
+  // Formatea el timestamp a una cadena legible
+  const formattedTimestamp = timestamp instanceof Date
+    ? timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : getCurrentTime(); // Fallback por si acaso
 
   return (
     <div className={`message ${sender}-message`}>
@@ -94,7 +98,7 @@ const Message = React.memo(({ message, highlightedWordInfo }) => {
           <span dangerouslySetInnerHTML={{ __html: text.replace(/\n/g, '<br>') }} />
         )}
       </div>
-      <div className="timestamp">{timestamp || getCurrentTime()}</div>
+      <div className="timestamp">{formattedTimestamp}</div>
     </div>
   );
 });
