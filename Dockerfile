@@ -1,40 +1,35 @@
-# Etapa de construcción
+# Build stage
 FROM node:18-alpine as build
 
-# Establecer directorio de trabajo
 WORKDIR /app
 
-# Copiar archivos de dependencias
+# Copy package files
 COPY package*.json ./
 
-# Instalar dependencias
+# Install dependencies
 RUN npm ci
 
-# Copiar el resto del código fuente
+# Copy source code
 COPY . .
 
-# Construir la aplicación
+# Build the app
 RUN npm run build
 
-# Etapa de producción
+# Production stage
 FROM nginx:alpine
 
-# Etiqueta para identificar el servicio
-LABEL name="n8n_chatbot_emocional"
-LABEL version="1.0"
-
-# Copiar la configuración de nginx
+# Copy nginx config
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Copiar los archivos construidos
+# Copy built files
 COPY --from=build /app/build /usr/share/nginx/html
 
-# Exponer el puerto 80
+# Expose port
 EXPOSE 80
 
 # Healthcheck básico
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost/ || exit 1
 
-# Iniciar nginx
+# Start nginx
 CMD ["nginx", "-g", "daemon off;"] 

@@ -1,15 +1,14 @@
 version: '3.8'
 
 services:
-  n8n_chatbot_emocional:
+  app:
     build: .
-    container_name: n8n_chatbot_emocional
-    restart: unless-stopped
     ports:
       - "80:80"
     environment:
       - NODE_ENV=production
       - REACT_APP_GOOGLE_API_KEY=${REACT_APP_GOOGLE_API_KEY}
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
       interval: 30s
