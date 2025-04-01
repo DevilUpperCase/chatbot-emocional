@@ -18,8 +18,6 @@ RUN npm run build
 # Production stage
 FROM nginx:alpine
 
-LABEL name="easypanel/n8n/chatbot-emocional"
-
 # Copy nginx config
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 

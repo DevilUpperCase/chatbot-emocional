@@ -2,7 +2,6 @@ version: '3.8'
 
 services:
   n8n_chatbot_emocional:
-    image: easypanel/n8n/chatbot-emocional:latest
     build: .
     ports:
       - "80:80"
