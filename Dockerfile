@@ -19,6 +19,10 @@ RUN npm run build
 # Etapa de producción
 FROM nginx:alpine
 
+# Etiqueta para identificar el servicio
+LABEL name="chatbot-emocional"
+LABEL version="1.0"
+
 # Copiar la configuración de nginx
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
@@ -27,6 +31,10 @@ COPY --from=build /app/build /usr/share/nginx/html
 
 # Exponer el puerto 80
 EXPOSE 80
+
+# Healthcheck básico
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost/ || exit 1
 
 # Iniciar nginx
 CMD ["nginx", "-g", "daemon off;"] 
