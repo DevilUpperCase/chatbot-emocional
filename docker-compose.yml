@@ -1,9 +1,9 @@
 version: '3.8'
 
 services:
-  n8n-chatbot-emocional:
+  n8n_chatbot_emocional:
     build: .
-    container_name: n8n-chatbot-emocional
+    container_name: n8n_chatbot_emocional
     restart: unless-stopped
     ports:
       - "80:80"
