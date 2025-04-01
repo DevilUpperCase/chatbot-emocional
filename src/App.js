@@ -1,9 +1,6 @@
 import React from 'react'; // No necesitas useEffect aquí ahora
 import './App.css';
-import Header from './components/Header';
-import ChatContainer from './components/ChatContainer';
-import InputArea from './components/InputArea';
-import { useChatbotLogic } from './hooks/useChatbotLogic';
+import { Header, ChatContainer, InputArea, useChatbotLogic } from './index';
 
 function App() {
   const {

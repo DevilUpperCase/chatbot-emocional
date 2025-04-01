@@ -1,6 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import Message from './Message';
-import TypingIndicator from './TypingIndicator';
+import { Message, TypingIndicator } from '../index';
 
 function ChatContainer({ messages, isTyping, highlightedWordInfo }) {
   const chatEndRef = useRef(null);

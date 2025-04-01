@@ -32,6 +32,13 @@ body { background-color: var(--bg-color); color: var(--text-color); height: 100v
    .header { min-height: 200px; /* Ajustado */ }
 }
 
+@media (max-width: 600px) {
+  .emoji-gif {
+    width: 120px;  /* Reducir tamaño */
+    height: 120px;
+  }
+}
+
 /* --- NUEVOS ESTILOS PARA BOTÓN TTS Y RESALTADO --- */
 #tts-button {
   background: none;

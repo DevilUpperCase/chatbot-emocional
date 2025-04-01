@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { synthesizeSpeech } from '../services/googleTtsApi.js';
+import { synthesizeSpeech } from '../index';
 
 // Función auxiliar para simular respuesta
 const simulateServerResponse = (message) => {
