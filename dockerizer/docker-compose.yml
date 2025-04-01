@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: dockerizer/Dockerfile
+    ports:
+      - "80:80"
+    environment:
+      - NODE_ENV=production
+      - REACT_APP_GOOGLE_API_KEY=${REACT_APP_GOOGLE_API_KEY}
+    restart: unless-stopped 
