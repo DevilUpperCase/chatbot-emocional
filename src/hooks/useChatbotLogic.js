@@ -139,29 +139,32 @@ export const useChatbotLogic = (initialMessages = []) => {
         const audio = new Audio(audioSrc);
         currentAudioRef.current = audio;
         
-        // Configurar duración promedio por palabra para simular resaltado
-        // Aproximadamente 3-4 palabras por segundo para un habla normal
-        const wordDuration = 300; // milliseconds por palabra
-        const startDelay = 50;   // pequeño retraso antes de empezar
+        // Configurar duración basada en la longitud de cada palabra
+        const baseDuration = 400; // Duración base por letra
+        const startDelay = 70;    // pequeño retraso antes de empezar
         
         // Configurar resaltado de palabras basado en tiempo
         words.forEach((word, index) => {
+          // Calcular duración basada en la longitud de la palabra
+          const wordDuration = word.text.length * baseDuration;
+          
           const timer = setTimeout(() => {
-            console.log(`[TTS] Resaltando palabra: "${word.text}" en posición ${word.start}`);
+            console.log(`[TTS] Resaltando palabra: "${word.text}" (${word.text.length} letras) en posición ${word.start}`);
             setHighlightedWordInfo({ 
               messageId: messageId, 
               charIndex: word.start 
             });
-          }, startDelay + (index * wordDuration));
+          }, startDelay + (index * baseDuration));
           
           wordTimersRef.current.push(timer);
         });
         
         // Limpiar resaltado al finalizar
+        const totalDuration = words.reduce((acc, word) => acc + (word.text.length * baseDuration), 0);
         highlightTimerRef.current = setTimeout(() => {
           setHighlightedWordInfo({ messageId: null, charIndex: null });
           console.log("[TTS] Finalizando resaltado");
-        }, startDelay + (words.length * wordDuration) + 500);
+        }, totalDuration + 500);
         
         // Configurar eventos de audio
         audio.onended = () => {
@@ -175,14 +178,19 @@ export const useChatbotLogic = (initialMessages = []) => {
           clearAllHighlightTimers();
         };
         
-        // Reproducir el audio
-        audio.play().catch(e => {
-          console.error("[audio] Error al iniciar reproducción:", e);
-          currentAudioRef.current = null;
-          clearAllHighlightTimers();
-        });
-        
-        console.log("[audio] Nueva reproducción iniciada");
+        // Reproducir el audio y comenzar el resaltado simultáneamente
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              console.log("[audio] Reproducción iniciada");
+            })
+            .catch(e => {
+              console.error("[audio] Error al iniciar reproducción:", e);
+              currentAudioRef.current = null;
+              clearAllHighlightTimers();
+            });
+        }
       })
       .catch(error => {
         console.error("[TTS] Error al sintetizar voz:", error);

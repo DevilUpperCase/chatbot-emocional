@@ -15,3 +15,24 @@ root.render(
 // to log results (for example: reportWebVitals(console.log))
 // or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
 reportWebVitals();
+
+// Components
+export { default as Message } from './components/Message';
+export { default as ChatContainer } from './components/ChatContainer';
+export { default as Header } from './components/Header';
+export { default as InputArea } from './components/InputArea';
+export { default as TypingIndicator } from './components/TypingIndicator';
+
+// Hooks
+export { useChatbotLogic } from './hooks/useChatbotLogic';
+
+// Services
+export { synthesizeSpeech } from './services/googleTtsApi';
+export { getChatbotResponse } from './services/chatbotService';
+
+// Styles
+export { default as AppCSS } from './App.css';
+export { default as IndexCSS } from './index.css';
+
+// Main App Component
+export { default as App } from './App';

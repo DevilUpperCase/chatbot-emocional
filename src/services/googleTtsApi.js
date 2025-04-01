@@ -13,8 +13,11 @@ export const synthesizeSpeech = async (text) => {
   const requestBody = {
     input: { text: text },
     // Puedes personalizar la voz aquí: https://cloud.google.com/text-to-speech/docs/voices
-    voice: { languageCode: 'es-ES', name: 'es-ES-Standard-A' },
-    audioConfig: { audioEncoding: 'MP3' }, // MP3 es ampliamente compatible
+    voice: { languageCode: 'es-ES', name: 'es-ES-Chirp3-HD-Charon'},
+    audioConfig: { 
+      audioEncoding: 'MP3',
+      // speakingRate: '1.5' 
+      }, // MP3 es ampliamente compatible
   };
 
   try {
