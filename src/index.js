@@ -24,7 +24,7 @@ export { default as InputArea } from './components/InputArea';
 export { default as TypingIndicator } from './components/TypingIndicator';
 
 // Hooks
-export { useChatbotLogic } from './hooks/useChatbotLogic';
+export { default as useChatbotLogic } from './hooks/useChatbotLogic';
 
 // Services
 export { synthesizeSpeech } from './services/googleTtsApi';

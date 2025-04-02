@@ -1,331 +1,314 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { synthesizeSpeech } from '../index';
 
-// Función auxiliar para simular respuesta
-const simulateServerResponse = (message) => {
-  const responses = [
-    { text: "¡Ja ja ja! Eso fue muy gracioso.\nMe encanta tu sentido del humor. 😂", emoji: "😂" },
-    { text: "Entiendo perfectamente lo que dices.\n¿En qué más puedo ayudarte hoy? 😊", emoji: "😊" },
-    { text: "Lamento mucho escuchar eso.\nSi necesitas hablar o ayuda, estoy aquí para ti. 😢", emoji: "😢" },
-    { text: "Vaya, esa es una pregunta muy interesante.\nDéjame pensarlo un momento... 🤔", emoji: "🤔" },
-    { text: "¡Totalmente de acuerdo contigo!\nEsa es una excelente perspectiva. 👍", emoji: "👍" },
-    { text: "¡Eso es maravilloso!\nMe alegra mucho escucharlo. ❤️", emoji: "❤️" },
-    { text: "¡Vaya!\nNo me esperaba esa respuesta. 😮", emoji: "😮" },
-    { text: "Gracias por compartir eso conmigo.\n¿Hay algo más en lo que pueda ayudarte hoy? 😊", emoji: "😊" }
-  ];
-  message = message.toLowerCase();
-  if (message.includes('jaja') || message.includes('risa') || message.includes('divertido') || message.includes('😂')) return responses[0];
-  if (message.includes('triste') || message.includes('mal') || message.includes('tristeza') || message.includes('deprimido') || message.includes('😢')) return responses[2];
-  if (message.includes('?') || message.includes('por qué') || message.includes('cómo') || message.includes('cuándo') || message.includes('🤔')) return responses[3];
-  if (message.includes('gracias') || message.includes('agradecimiento') || message.includes('agradezco') || message.includes('❤️')) return responses[5];
-  if (message.includes('sorpresa') || message.includes('increíble') || message.includes('wow') || message.includes('😮')) return responses[6];
-  if (message.includes('hola') || message.includes('buenos días') || message.includes('buenas tardes') || message.includes('😊')) return responses[1];
-  if (message.includes('ok') || message.includes('vale') || message.includes('entiendo') || message.includes('👍')) return responses[4];
-  return responses[Math.floor(Math.random() * responses.length)];
+// URLs de webhook
+const WEBHOOK_URLS = {
+  test: 'https://n8n-n8n.am4jxh.easypanel.host/webhook-test/fbf1d13f-fbdf-4f97-8656-6896fb3263f8',
+  production: 'https://n8n-n8n.am4jxh.easypanel.host/webhook/fbf1d13f-fbdf-4f97-8656-6896fb3263f8'
 };
 
-// Función auxiliar para obtener la hora actual
-const getCurrentTime = () => {
-  const now = new Date();
-  return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+// Helper to convert file to Base64
+const fileToBase64 = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result.split(',')[1]); // Extract Base64 part
+    reader.onerror = error => reject(error);
+  });
 };
 
-// Regex mejorado para filtrar más tipos de emojis
-const emojiRegex = /(\p{Emoji_Presentation}|\p{Emoji}\uFE0F|\p{Emoji_Modifier_Base}\p{Emoji_Modifier}?|\u200D[\p{Emoji}])+\s*/gu;
-
-// Función auxiliar para limpiar texto de emojis y caracteres especiales
-const cleanTextForSpeech = (text) => {
-  return text
-    .replace(emojiRegex, '') // Quitar todos los emojis
-    .replace(/\n/g, ' ')     // Reemplazar saltos de línea con espacios
-    .replace(/\s+/g, ' ')    // Normalizar espacios múltiples
-    .trim();                 // Quitar espacios sobrantes
-};
-
-// Función para dividir texto en palabras con sus posiciones
-const splitTextIntoWords = (text) => {
-  const words = [];
-  const regex = /\S+/g;
-  let match;
-  
-  while ((match = regex.exec(text)) !== null) {
-    words.push({
-      text: match[0],
-      start: match.index,
-      end: match.index + match[0].length
-    });
-  }
-  
-  return words;
-};
-
-export const useChatbotLogic = (initialMessages = []) => {
-  const [messages, setMessages] = useState(initialMessages);
+// Custom Hook for Chatbot Logic
+function useChatbotLogic() {
+  const [messages, setMessages] = useState([]);
   const [currentEmojiKey, setCurrentEmojiKey] = useState('default');
   const [isTyping, setIsTyping] = useState(false);
-  const [isMuted, setIsMuted] = useState(false); 
-  const [ttsSupported, setTtsSupported] = useState(true); // Google TTS siempre disponible si hay API KEY
-  const [highlightedWordInfo, setHighlightedWordInfo] = useState({ messageId: null, charIndex: null });
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const isMounted = useRef(true);
-  
-  const defaultEmojiTimeoutRef = useRef(null);
-  const currentAudioRef = useRef(null);
-  const highlightTimerRef = useRef(null);
-  const wordTimersRef = useRef([]);
-  
-  // Para limpiar todos los timers de resaltado
-  const clearAllHighlightTimers = useCallback(() => {
-    if (highlightTimerRef.current) {
-      clearTimeout(highlightTimerRef.current);
-      highlightTimerRef.current = null;
+  const [isMuted, setIsMuted] = useState(() => localStorage.getItem('ttsMuted') === 'true');
+  const [ttsSupported, setTtsSupported] = useState(false);
+  const [highlightedWordInfo, setHighlightedWordInfo] = useState({ messageId: null, charIndex: -1 });
+  const [isTestMode, setIsTestMode] = useState(false); // Default to production
+  const audioRef = useRef(null); // Para controlar la reproducción de audio TTS
+  const ttsQueue = useRef([]); // Cola para manejar TTS secuencialmente
+  const isPlayingTTS = useRef(false); // Estado para saber si algo se está reproduciendo
+  const nextMessageId = useRef(0); // Simple ID generator for messages
+  const emojiDisplayTimer = useRef(null); // Timer para controlar la duración del emoji
+
+  // Función para actualizar el emoji y configurar un timer para volver al estado por defecto
+  const showEmojiTemporarily = useCallback((emojiType, duration = 8000) => {
+    // Limpiar timer anterior si existe
+    if (emojiDisplayTimer.current) {
+      clearTimeout(emojiDisplayTimer.current);
     }
     
-    wordTimersRef.current.forEach(timer => clearTimeout(timer));
-    wordTimersRef.current = [];
+    // Actualizar el emoji actual
+    setCurrentEmojiKey(emojiType || 'default');
     
-    setHighlightedWordInfo({ messageId: null, charIndex: null });
+    // Configurar un timer para volver al emoji por defecto después de la duración
+    emojiDisplayTimer.current = setTimeout(() => {
+      setCurrentEmojiKey('default');
+      emojiDisplayTimer.current = null;
+    }, duration);
   }, []);
 
-  // Para detener cualquier audio en reproducción
-  const stopCurrentAudio = useCallback(() => {
-    clearAllHighlightTimers();
-    
-    if (currentAudioRef.current) {
-      try {
-        currentAudioRef.current.pause();
-        currentAudioRef.current.currentTime = 0;
-        currentAudioRef.current = null;
-        console.log("[audio] Audio anterior detenido");
-      } catch (e) {
-        console.error("[audio] Error al detener audio:", e);
-      }
-    }
-  }, [clearAllHighlightTimers]);
-
-  // Función para reproducir audio con Google TTS y simular resaltado
-  const playGoogleTTS = useCallback((text, messageId) => {
-    if (isMuted || !text) {
-      return;
-    }
-    
-    stopCurrentAudio();
-    
-    // Limpiar el texto para la síntesis de voz
-    const cleanedText = cleanTextForSpeech(text);
-    
-    if (cleanedText.length === 0) {
-      console.log("[TTS] No hay texto para hablar después de quitar emojis");
-      return;
-    }
-    
-    console.log("[TTS] Texto limpio para TTS:", cleanedText);
-    
-    // Preparar resaltado basado en palabras
-    const words = splitTextIntoWords(cleanedText);
-    console.log("[TTS] Palabras para resaltado:", words);
-    
-    // Solicitar audio a Google Cloud TTS
-    synthesizeSpeech(cleanedText)
-      .then(audioContent => {
-        if (!audioContent) {
-          console.error("[TTS] No se pudo obtener audio de Google TTS");
-          return;
-        }
-        
-        // Crear y reproducir el audio
-        const audioSrc = `data:audio/mp3;base64,${audioContent}`;
-        const audio = new Audio(audioSrc);
-        currentAudioRef.current = audio;
-        
-        // Configurar duración basada en la longitud de cada palabra
-        const baseDuration = 400; // Duración base por letra
-        const startDelay = 70;    // pequeño retraso antes de empezar
-        
-        // Configurar resaltado de palabras basado en tiempo
-        words.forEach((word, index) => {
-          // Calcular duración basada en la longitud de la palabra
-          const wordDuration = word.text.length * baseDuration;
-          
-          const timer = setTimeout(() => {
-            console.log(`[TTS] Resaltando palabra: "${word.text}" (${word.text.length} letras) en posición ${word.start}`);
-            setHighlightedWordInfo({ 
-              messageId: messageId, 
-              charIndex: word.start 
-            });
-          }, startDelay + (index * baseDuration));
-          
-          wordTimersRef.current.push(timer);
-        });
-        
-        // Limpiar resaltado al finalizar
-        const totalDuration = words.reduce((acc, word) => acc + (word.text.length * baseDuration), 0);
-        highlightTimerRef.current = setTimeout(() => {
-          setHighlightedWordInfo({ messageId: null, charIndex: null });
-          console.log("[TTS] Finalizando resaltado");
-        }, totalDuration + 500);
-        
-        // Configurar eventos de audio
-        audio.onended = () => {
-          currentAudioRef.current = null;
-          console.log("[audio] Reproducción completada");
-        };
-        
-        audio.onerror = (e) => {
-          console.error("[audio] Error en reproducción:", e);
-          currentAudioRef.current = null;
-          clearAllHighlightTimers();
-        };
-        
-        // Reproducir el audio y comenzar el resaltado simultáneamente
-        const playPromise = audio.play();
-        if (playPromise !== undefined) {
-          playPromise
-            .then(() => {
-              console.log("[audio] Reproducción iniciada");
-            })
-            .catch(e => {
-              console.error("[audio] Error al iniciar reproducción:", e);
-              currentAudioRef.current = null;
-              clearAllHighlightTimers();
-            });
-        }
-      })
-      .catch(error => {
-        console.error("[TTS] Error al sintetizar voz:", error);
-      });
-  }, [isMuted, stopCurrentAudio, clearAllHighlightTimers]);
-
-  // Inicialización
+  // Check TTS support
   useEffect(() => {
-    // Limpieza al desmontar
-    return () => {
-      stopCurrentAudio();
-      clearTimeout(defaultEmojiTimeoutRef.current);
-      clearAllHighlightTimers();
-      isMounted.current = false;
-    };
-  }, [stopCurrentAudio, clearAllHighlightTimers]);
-
-  const addMessage = useCallback((text, sender = 'user', type = 'text') => {
-    console.log(`[addMessage] Intentando añadir: "${text}" de ${sender}`);
-    const newMessage = {
-      id: Date.now() + Math.random(),
-      text,
-      sender,
-      timestamp: new Date(),
-      type,
-    };
-    setMessages((prevMessages) => {
-        console.log(`[addMessage ${sender}] Estado PREVIO:`, prevMessages.length);
-        const updatedMessages = [...prevMessages, newMessage];
-        console.log(`[addMessage ${sender}] Estado NUEVO:`, updatedMessages.length);
-        return updatedMessages;
-    });
-    console.log(`[addMessage ${sender}] Mensaje añadido (objeto devuelto):`, newMessage.id);
-    return newMessage;
+    setTtsSupported('speechSynthesis' in window);
   }, []);
 
-  const processAndAddChatbotResponse = useCallback(async (userMessageText) => {
-    console.log("[process] Iniciado.");
-    setIsLoading(true);
-    setError(null);
+  // Limpia el timer cuando se desmonta el componente
+  useEffect(() => {
+    return () => {
+      if (emojiDisplayTimer.current) {
+        clearTimeout(emojiDisplayTimer.current);
+      }
+    };
+  }, []);
+
+  // Toggle Test Mode
+  const toggleTestMode = useCallback(() => {
+    setIsTestMode(prev => !prev);
+    // Optionally, add a user feedback message here
+    console.log(`Switched to ${!isTestMode ? 'Test' : 'Production'} Mode`);
+  }, [isTestMode]);
+
+  // Toggle Mute
+  const handleToggleMute = useCallback(() => {
+    setIsMuted(prev => {
+      const newState = !prev;
+      localStorage.setItem('ttsMuted', newState.toString());
+      if (newState && audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+        ttsQueue.current = []; // Clear queue if muted
+        isPlayingTTS.current = false;
+        setHighlightedWordInfo({ messageId: null, charIndex: -1 });
+      }
+      return newState;
+    });
+  }, []);
+
+  // Send message (text and/or files) to webhook
+  const sendToWebhook = useCallback(async (payload) => {
+    const webhookUrl = isTestMode ? WEBHOOK_URLS.test : WEBHOOK_URLS.production;
+    try {
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) {
+        throw new Error(`Webhook response error: ${response.status} ${response.statusText}`);
+      }
+      return await response.json(); // Expect { message, code, emoji }
+    } catch (error) {
+      console.error('Error sending to webhook:', error);
+      // Return a default error structure or re-throw
+      return { message: "Error al conectar. Inténtalo de nuevo.", code: "error", emoji: "😢" };
+    }
+  }, [isTestMode]);
+
+  // Process TTS Queue
+  const processTTSQueue = useCallback(async () => {
+    if (isMuted || isPlayingTTS.current || ttsQueue.current.length === 0) {
+      return;
+    }
+
+    isPlayingTTS.current = true;
+    const { text, messageId } = ttsQueue.current.shift();
 
     try {
-      console.log("[process] Obteniendo respuesta simulada...");
-      const simulatedData = simulateServerResponse(userMessageText);
-      console.log("[process] Respuesta simulada:", simulatedData);
+      const audioSrc = await synthesizeSpeech(text);
+      if (audioRef.current) {
+         audioRef.current.src = audioSrc;
+         audioRef.current.play().catch(e => console.error("Error playing audio:", e));
 
-      console.log("[process] Esperando delay simulado...");
-      await new Promise(resolve => setTimeout(resolve, 500));
-      console.log("[process] Delay simulado terminado.");
+         // Handle word highlighting during playback
+         const words = text.split(/\s+/);
+         let wordStartTime = 0;
+         let wordIndex = 0;
 
-      const responseText = simulatedData.text;
-      const analysis = { sentiment: 'neutral', emoji: simulatedData.emoji };
+         audioRef.current.ontimeupdate = () => {
+            if (audioRef.current && wordIndex < words.length) {
+              // Rough estimation based on average speech rate (adjust as needed)
+              const estimatedWordDuration = (audioRef.current.duration / words.length) * 1000;
+              if (audioRef.current.currentTime * 1000 >= wordStartTime) {
+                setHighlightedWordInfo({ 
+                  messageId, 
+                  charIndex: text.indexOf(words[wordIndex]) // Cambio de wordIndex a charIndex para compatibilidad
+                });
+                wordStartTime += estimatedWordDuration;
+                wordIndex++;
+              }
+            }
+          };
 
-      console.log(`[process] Añadiendo mensaje del BOT: "${responseText}"`);
-      const botMessage = addMessage(responseText, 'bot');
-
-      if (!botMessage) {
-        console.error("[process] ¡addMessage para el bot devolvió undefined!");
-      } else {
-        console.log("[process] Mensaje del bot añadido OK, ID:", botMessage.id);
-
-        // --- TTS con Google Cloud y resaltado simulado ---
-        if (botMessage.text && !isMuted) {
-            console.log("[process] Procesando texto para Google TTS con resaltado simulado");
-            // Pequeña demora para asegurar que el mensaje se haya renderizado
-            setTimeout(() => {
-              playGoogleTTS(botMessage.text, botMessage.id);
-            }, 100);
-        } else {
-            console.log("[process] TTS deshabilitado, no se hablará");
-        }
-        // --- Fin TTS ---
       }
+    } catch (error) {
+      console.error("Error synthesizing speech:", error);
+      // Continue queue even if one fails
+      isPlayingTTS.current = false;
+      setHighlightedWordInfo({ messageId: null, charIndex: null });
+      processTTSQueue();
+    }
+  }, [isMuted]);
 
-      if (analysis) {
-          console.log("[process] Análisis de sentimiento:", analysis);
+  // Effect for audio playback end
+  useEffect(() => {
+    const audioElement = audioRef.current;
+    const handleAudioEnd = () => {
+      isPlayingTTS.current = false;
+      setHighlightedWordInfo({ messageId: null, charIndex: -1 });
+      processTTSQueue(); // Process next item in queue
+    };
+
+    if (audioElement) {
+      audioElement.addEventListener('ended', handleAudioEnd);
+      audioElement.addEventListener('error', handleAudioEnd); // Treat error as end
+    }
+
+    return () => {
+      if (audioElement) {
+        audioElement.removeEventListener('ended', handleAudioEnd);
+        audioElement.removeEventListener('error', handleAudioEnd);
       }
+    };
+  }, [processTTSQueue]);
 
-      // *** Actualiza el estado del emoji ***
-      if (analysis && analysis.emoji && typeof analysis.emoji === 'string') {
-          setCurrentEmojiKey(analysis.emoji);
-          console.log("[process] Emoji actualizado a:", analysis.emoji);
+  // Add message to state and potentially TTS queue
+  const addMessage = useCallback((sender, text, files = [], status = 'sent', emoji = null) => {
+    const newMessage = {
+      id: nextMessageId.current++,
+      sender,
+      text,
+      timestamp: new Date(),
+      files: files.map(f => ({ // Store minimal info needed for display
+        name: f.name,
+        type: f.type,
+        url: URL.createObjectURL(f) // Create blob URL for display in Message component
+      })),
+      status,
+      emoji // Store emoji if provided (for bot messages)
+    };
+    setMessages(prev => [...prev, newMessage]);
 
-          clearTimeout(defaultEmojiTimeoutRef.current);
-          defaultEmojiTimeoutRef.current = setTimeout(() => {
-              setCurrentEmojiKey('default');
-              console.log("[process] Emoji vuelto a 'default' por timeout.");
-          }, 8000); // 8 segundos
+    if (sender === 'bot' && text && !isMuted && ttsSupported) {
+      ttsQueue.current.push({ text, messageId: newMessage.id });
+      processTTSQueue();
+    }
 
-      } else {
+    // Clean up blob URLs when message is eventually removed (if implementing message deletion)
+    // Or potentially after a certain time / number of messages
+  }, [isMuted, ttsSupported, processTTSQueue]);
+
+  // Handle Sending Message (Text and Files)
+  const handleSendMessage = useCallback(async (text, files = []) => {
+    const userMessageId = nextMessageId.current;
+    // Add user message immediately with 'sending' status and previews
+     const userMessageFiles = files.map(file => ({
+      name: file.name,
+      type: file.type,
+      url: URL.createObjectURL(file) // Create Blob URL for immediate display
+    }));
+    setMessages(prev => [...prev, {
+        id: userMessageId,
+        sender: 'user',
+        text,
+        timestamp: new Date(),
+        files: userMessageFiles,
+        status: 'sending' // Initial status
+    }]);
+
+    // Mostrar el emoji de "processing" mientras se espera la respuesta
+    setIsTyping(true);
+    showEmojiTemporarily('processing');
+
+    // Prepare files for webhook (convert to Base64)
+    const filesPayload = await Promise.all(
+      files.map(async (file) => ({
+        filename: file.name,
+        content: await fileToBase64(file),
+        type: file.type,
+      }))
+    );
+
+    // Send to webhook
+    const payload = { message: text, files: filesPayload };
+    const response = await sendToWebhook(payload);
+
+     // Update user message status to 'delivered'
+     setMessages(prevMessages => prevMessages.map(msg =>
+        msg.id === userMessageId ? { ...msg, status: 'delivered' } : msg
+     ));
+
+     // Revoke Blob URLs for user message files now that they are sent
+     userMessageFiles.forEach(f => URL.revokeObjectURL(f.url));
+
+    setIsTyping(false);
+
+    // Handle webhook response
+    if (response) {
+      try {
+        // La respuesta es un array de objetos [{"message":"texto","emoji":"tipo"}]
+        if (Array.isArray(response)) {
+          // Procesar cada mensaje en el array de respuestas
+          response.forEach((item, index) => {
+            if (item && item.message) {
+              const emojiType = item.emoji || 'default';
+              
+              // Mostrar el emoji temporalmente (solo para el primer mensaje)
+              if (index === 0) {
+                // Forzar reset del emoji para asegurar que siempre cambie, incluso si es el mismo tipo
+                setCurrentEmojiKey('default');
+                // Pequeño retraso para garantizar que el cambio sea perceptible
+                setTimeout(() => {
+                  showEmojiTemporarily(emojiType, 8000);
+                }, 10);
+              }
+              
+              addMessage('bot', item.message, [], 'received', emojiType);
+            }
+          });
+        } 
+        // Compatibilidad con formato anterior (objeto simple)
+        else if (response.message) {
+          const emojiType = response.emoji || 'default';
+          // Forzar reset del emoji para asegurar que siempre cambie, incluso si es el mismo tipo
           setCurrentEmojiKey('default');
-          console.log("[process] No se encontró emoji válido, usando 'default'.");
+          // Pequeño retraso para garantizar que el cambio sea perceptible
+          setTimeout(() => {
+            showEmojiTemporarily(emojiType, 8000);
+          }, 10);
+          addMessage('bot', response.message, [], 'received', emojiType);
+        } 
+        else {
+          throw new Error('Formato de respuesta desconocido');
+        }
+      } catch (error) {
+        console.error('Error procesando la respuesta:', error);
+        // Forzar reset del emoji
+        setCurrentEmojiKey('default');
+        setTimeout(() => {
+          showEmojiTemporarily('decepción', 8000);
+        }, 10);
+        addMessage('bot', "Hubo un problema procesando tu solicitud.", [], 'received', 'decepción');
       }
-      // *** Fin actualización emoji ***
-
-    } catch (err) {
-      if (!isMounted.current) {
-          console.log("[process] Error capturado, pero componente ya desmontado.");
-          return;
-      }
-      console.error("[process] Error en try/catch:", err);
-      const errorMessage = err.message || 'Ocurrió un error.';
-      setError(errorMessage);
-      addMessage(errorMessage, 'error');
+    } else {
+      // Handle potential errors or unexpected responses
+      // Forzar reset del emoji
       setCurrentEmojiKey('default');
-    } finally {
-      console.log("[process] Bloque finally ejecutado.");
-      console.log("[process] Estableciendo isLoading = false.");
-      setIsLoading(false);
+      setTimeout(() => {
+        showEmojiTemporarily('decepción', 8000);
+      }, 10);
+      addMessage('bot', "Hubo un problema procesando tu solicitud.", [], 'received', 'decepción');
     }
-  }, [addMessage, setCurrentEmojiKey, stopCurrentAudio, playGoogleTTS, isMuted]);
 
-  const handleSendMessage = useCallback((userMessageText) => {
-    console.log(`[handleSendMessage] Iniciado con texto: "${userMessageText}"`);
-    if (!userMessageText.trim() || isLoading) { return; }
-    console.log("[handleSendMessage] Añadiendo mensaje de USUARIO...");
-    addMessage(userMessageText, 'user');
-    console.log("[handleSendMessage] Llamando a processAndAddChatbotResponse...");
-    processAndAddChatbotResponse(userMessageText);
-  }, [isLoading, addMessage, processAndAddChatbotResponse]);
+  }, [sendToWebhook, addMessage, showEmojiTemporarily]);
 
-  // --- Toggle Mute ---
-  const handleToggleMute = useCallback(() => {
-    const newMutedState = !isMuted;
-    setIsMuted(newMutedState);
-
-    if (newMutedState) {
-      stopCurrentAudio(); // Detiene el audio actual si silenciamos
-    }
-  }, [isMuted, stopCurrentAudio]);
-
-  const clearChat = useCallback(() => {
-    setMessages([]);
-    setError(null);
-  }, []);
+  // Simulate initial bot message (optional)
+  useEffect(() => {
+    // addMessage('bot', "¡Hola! ¿Cómo puedo ayudarte hoy?", [], 'received', '😊');
+  }, [addMessage]); // Dependency ensures addMessage is stable
 
   return {
     messages,
@@ -334,10 +317,13 @@ export const useChatbotLogic = (initialMessages = []) => {
     isMuted,
     ttsSupported,
     highlightedWordInfo,
-    isLoading,
-    error,
+    isTestMode,
     handleSendMessage,
+    // handleSendFile, // No longer needed
     handleToggleMute,
-    clearChat,
+    toggleTestMode,
+    audioRef // Expose audioRef if needed externally (e.g., for testing)
   };
-};
+}
+
+export default useChatbotLogic;

@@ -10,8 +10,11 @@ function App() {
     isMuted,
     ttsSupported,
     highlightedWordInfo,
-    handleSendMessage,
+    isTestMode,
+    handleSendMessage, // Renombrar o reutilizar para manejar texto y archivos
+    // handleSendFile, // Ya no se necesita como prop separada
     handleToggleMute,
+    toggleTestMode,
   } = useChatbotLogic();
 
   // El useEffect que causaba errores ha sido eliminado.
@@ -24,6 +27,8 @@ function App() {
         isMuted={isMuted}
         ttsSupported={ttsSupported}
         onToggleMute={handleToggleMute}
+        isTestMode={isTestMode}
+        onToggleTestMode={toggleTestMode}
       />
       <ChatContainer
          messages={messages}

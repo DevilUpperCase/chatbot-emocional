@@ -135,6 +135,55 @@ body { background-color: var(--bg-color); color: var(--text-color); height: 100v
   z-index: 1;
 }
 
+/* Estilo para el emoji en los mensajes del bot */
+.message-emoji {
+  font-size: 24px;
+  margin-bottom: 8px;
+  text-align: left;
+  line-height: 1;
+}
+
+/* Estructura del mensaje con metadata */
+.message-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.message-metadata {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.message-status {
+  display: flex;
+  align-items: center;
+}
+
+.status-icon {
+  margin-left: 4px;
+}
+
+.status-icon.sent {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.status-icon.delivered {
+  color: var(--primary-color);
+}
+
+.status-icon.read {
+  color: #4caf50;
+}
+
+.status-text.sending {
+  font-style: italic;
+  opacity: 0.7;
+}
+
 /* Resaltado intenso */
 .word.highlighted {
   background: #FFEB3B !important;
@@ -148,4 +197,282 @@ body { background-color: var(--bg-color); color: var(--text-color); height: 100v
   0% { transform: scale(1); }
   50% { transform: scale(1.08); }
   100% { transform: scale(1); }
+}
+
+/* --- ESTILOS PARA ARCHIVOS ADJUNTOS --- */
+.file-attachment {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 5px 0;
+  max-width: 100%;
+}
+
+.attached-image {
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: 8px;
+  object-fit: contain;
+}
+
+.file-name {
+  margin-top: 5px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  word-break: break-all;
+  text-align: center;
+}
+
+.file-icon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 60px;
+  height: 60px;
+  margin-bottom: 5px;
+  color: #ff5722;
+}
+
+.file-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-decoration: none;
+  color: inherit;
+  padding: 10px;
+  border: 1px dashed rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.file-link:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Nuevos estilos para mensajes con archivos adjuntos estilo WhatsApp/Telegram */
+.message-attachments {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin-bottom: 8px;
+  gap: 5px;
+}
+
+/* Para permitir múltiples imágenes en fila en pantallas grandes */
+@media (min-width: 600px) {
+  .message-attachments {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+  
+  .message-attachments .file-attachment {
+    width: calc(50% - 5px);
+    max-width: 300px;
+  }
+}
+
+/* Estilos para el contenido de texto del mensaje */
+.message-text {
+  margin-top: 5px;
+}
+
+/* Ajustes para que las imágenes tengan esquinas redondeadas */
+.user-message .attached-image {
+  border-radius: 8px 8px 0 8px;
+}
+
+.bot-message .attached-image {
+  border-radius: 8px 8px 8px 0;
+}
+
+/* Estilos para cuando solo hay imagen sin texto */
+.message-content:has(.message-attachments:not(:empty)) {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Para que las imágenes se vean mejor dentro de los mensajes */
+.file-attachment {
+  width: 100%;
+  max-width: 300px;
+}
+
+.user-message .file-attachment {
+  align-self: flex-end;
+}
+
+.bot-message .file-attachment {
+  align-self: flex-start;
+}
+
+/* Estilos para el botón de adjuntar archivos */
+.attachment-button {
+  background: none;
+  color: #ccc;
+  border: none;
+  margin-right: 5px;
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 50%;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.attachment-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+/* Estilos específicos para tipos de mensajes */
+.message.image-type {
+  max-width: 70%;
+}
+
+.message-content {
+  width: 100%;
+}
+
+/* --- ESTILOS PARA EL SELECTOR DE ENTORNO (TEST/PROD) --- */
+.mode-toggle-container {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+.env-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+.env-toggle.test-mode {
+  background-color: #ff9800;
+  color: #000;
+}
+
+.env-toggle.prod-mode {
+  background-color: #4caf50;
+  color: #fff;
+}
+
+.mode-label {
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+
+.env-toggle:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+/* Preview for selected files */
+.selected-files-preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    padding: 5px 10px 10px;
+    max-height: 70px; /* Limit height */
+    overflow-y: auto; /* Enable scroll if needed */
+}
+
+.file-chip {
+    display: flex;
+    align-items: center;
+    background-color: var(--input-background-color); /* Consistent background */
+    color: var(--text-color);
+    border-radius: 15px;
+    padding: 3px 5px 3px 3px; /* Adjust padding for thumbnail */
+    font-size: 12px;
+    max-width: 180px; /* Increase max-width slightly */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.file-thumbnail {
+    width: 24px; /* Thumbnail size */
+    height: 24px;
+    border-radius: 4px;
+    margin-right: 6px;
+    object-fit: cover; /* Cover for images */
+    flex-shrink: 0;
+}
+
+.pdf-icon {
+    font-size: 18px; /* Size for PDF icon */
+    color: var(--icon-color); /* Or a specific PDF color */
+    text-align: center;
+    line-height: 24px; /* Center icon vertically */
+}
+
+.file-chip span {
+    margin-right: 5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-grow: 1; /* Allow text to take remaining space */
+    min-width: 0; /* Prevent text from pushing button out */
+}
+
+.file-chip button {
+    background: none;
+    border: none;
+    color: var(--icon-color); /* Or a specific color for remove icon */
+    cursor: pointer;
+    padding: 0;
+    margin-left: auto;
+    font-size: 10px;
+}
+
+.file-chip button:hover {
+    color: #f44336; /* Red on hover for remove */
+}
+
+/* Adjustments for InputArea Wrapper */
+.input-area-wrapper {
+  display: flex;
+  flex-direction: column; /* Stack preview and input container */
+  background-color: var(--background-color);
+  border-top: 1px solid var(--border-color);
+  padding-top: 5px; /* Add some padding above the preview */
+}
+
+.input-container {
+    display: flex;
+    align-items: flex-end; /* Align items to the bottom */
+    padding: 10px;
+    gap: 10px;
+    border-top: 1px solid var(--border-color); /* Separator line */
+}
+
+/* Styles for message status checkmarks */
+.message-status {
+    margin-left: 5px;
+    font-size: 10px; /* Smaller than timestamp */
+    color: var(--icon-color); /* Default check color */
+}
+
+.message-status.status-delivered {
+    color: #4fc3f7; /* Blue color for delivered */
+}
+
+.message-footer {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center; /* Vertically align timestamp and status */
+    margin-top: 5px;
+    font-size: 12px;
+    color: var(--timestamp-color);
 }
