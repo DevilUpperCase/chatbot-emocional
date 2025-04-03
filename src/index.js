@@ -27,7 +27,6 @@ export { default as TypingIndicator } from './components/TypingIndicator';
 export { default as useChatbotLogic } from './hooks/useChatbotLogic';
 
 // Services
-export { synthesizeSpeech } from './services/googleTtsApi';
 export { getChatbotResponse } from './services/chatbotService';
 
 // Styles

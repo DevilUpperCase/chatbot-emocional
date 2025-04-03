@@ -9,70 +9,11 @@ const getCurrentTime = () => {
   return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
-// Función auxiliar para dividir el texto en palabras y espacios, guardando índice original
-const splitTextIntoSpans = (text) => {
-  if (!text) return [];
-  
-  const parts = [];
-  let charIndexOriginal = 0;
-  // Regex mejorado para capturar palabras (incluyendo acentos y ñ) y espacios/saltos de línea
-  const regex = /(\S+)|(\s+)/gu;
-  let match;
-
-  while ((match = regex.exec(text)) !== null) {
-    const part = match[0];
-    if (match[1]) { // Es una palabra
-      parts.push({
-        type: 'word',
-        text: part,
-        charIndexOriginal: charIndexOriginal,
-      });
-    } else if (match[2]) { // Es espacio/salto de línea
-      // Reemplazar saltos de línea con <br/> para renderizar, pero mantener el texto original para índices
-      const renderedText = part.replace(/\n/g, '<br/>');
-      parts.push({ type: 'space', text: renderedText, originalText: part });
-    }
-    charIndexOriginal += part.length; // Siempre avanzar por la longitud original
-  }
-  return parts;
-};
-
-const Message = React.memo(({ message, highlightedWordInfo }) => {
+const Message = React.memo(({ message }) => {
   // Extraemos las propiedades del mensaje, incluyendo files
   const { id, text, sender, timestamp, type, fileData, status, files = [], emoji } = message;
   const isBot = sender === 'bot';
   const isUser = sender === 'user';
-
-  // Divide el texto en spans solo para mensajes del bot
-  const messageParts = useMemo(() => {
-    if (isBot && text) {
-      return splitTextIntoSpans(text);
-    }
-    return null; // No necesitamos spans para el usuario
-  }, [isBot, text]);
-
-  // Determina qué palabra resaltar
-  const highlightedIndex = useMemo(() => {
-    if (!isBot || !highlightedWordInfo || highlightedWordInfo.messageId !== id || highlightedWordInfo.charIndex === null) {
-      return -1; // No hay resaltado para este mensaje
-    }
-
-    const { charIndex } = highlightedWordInfo;
-    let currentSpanIndex = -1;
-    // Encuentra el span cuya posición original sea la más cercana <= charIndex
-    for (let i = 0; i < (messageParts || []).length; i++) {
-      if (messageParts[i].type === 'word') {
-        const spanStartIndex = messageParts[i].charIndexOriginal;
-        if (spanStartIndex <= charIndex) {
-          currentSpanIndex = i;
-        } else {
-          // Si el índice del span es mayor, el span correcto fue el anterior.
-          break;
-        }
-      }
-    }
-    return currentSpanIndex;
-  }, [isBot, highlightedWordInfo, id, messageParts]);
 
   // Formatea el timestamp a una cadena legible
   const formattedTimestamp = timestamp instanceof Date
@@ -190,66 +131,22 @@ const Message = React.memo(({ message, highlightedWordInfo }) => {
   const renderTextContent = () => {
     if (!text || text.trim() === '') return null;
     
-    if (isBot && messageParts) {
-      // Mensaje de texto del bot (con posible resaltado)
-      // Si tiene resaltado, usamos el sistema anterior para mantener esa funcionalidad
-      if (highlightedWordInfo && highlightedWordInfo.messageId === id) {
-        return (
-          <div className="message-text">
-            {messageParts.map((part, index) => {
-              if (part.type === 'word') {
-                return (
-                  <span
-                    key={index}
-                    className={`word ${index === highlightedIndex ? 'highlighted' : ''}`}
-                    data-char-index-original={part.charIndexOriginal}
-                  >
-                    {part.text}
-                  </span>
-                );
-              } else { // Es espacio o <br/>
-                // Usamos dangerouslySetInnerHTML para renderizar <br/> correctamente
-                return <span key={index} dangerouslySetInnerHTML={{ __html: part.text }} />;
-              }
-            })}
-          </div>
-        );
-      } else {
-        // Si no hay resaltado, usamos markdown
-        return (
-          <div className="message-text markdown-content">
-            <ReactMarkdown 
-              components={{
-                a: ({node, children, ...props}) => (
-                  <a {...props} target="_blank" rel="noopener noreferrer">
-                    {children}
-                  </a>
-                )
-              }}
-            >
-              {text}
-            </ReactMarkdown>
-          </div>
-        );
-      }
-    } else {
-      // Mensajes de texto normales del usuario
-      return (
-        <div className="message-text">
-          <ReactMarkdown 
-            components={{
-              a: ({node, children, ...props}) => (
-                <a {...props} target="_blank" rel="noopener noreferrer">
-                  {children}
-                </a>
-              )
-            }}
-          >
-            {text}
-          </ReactMarkdown>
-        </div>
-      );
-    }
+    // Simplified text rendering with markdown for all messages
+    return (
+      <div className="message-text markdown-content">
+        <ReactMarkdown 
+          components={{
+            a: ({node, children, ...props}) => (
+              <a {...props} target="_blank" rel="noopener noreferrer">
+                {children}
+              </a>
+            )
+          }}
+        >
+          {text}
+        </ReactMarkdown>
+      </div>
+    );
   };
 
   return (

@@ -1,6 +1,6 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faVolumeUp, faVolumeMute, faCode, faRocket } from '@fortawesome/free-solid-svg-icons';
+import { faCode, faRocket } from '@fortawesome/free-solid-svg-icons';
 
 const emojis = {
   "default": { gif: "https://fonts.gstatic.com/s/e/notoemoji/latest/1f60a/512.gif" },
@@ -25,7 +25,7 @@ const emojis = {
   "🤔": { gif: "https://fonts.gstatic.com/s/e/notoemoji/latest/1f914/512.gif", emoji: "🤔" }
 };
 
-function Header({ currentEmojiKey, isMuted, ttsSupported, onToggleMute, isTestMode, onToggleTestMode }) {
+function Header({ currentEmojiKey, isTestMode, onToggleTestMode }) {
   const emojiData = emojis[currentEmojiKey] || emojis.default;
 
   return (
@@ -43,27 +43,12 @@ function Header({ currentEmojiKey, isMuted, ttsSupported, onToggleMute, isTestMo
       </div>
       <div className="emoji-container">
         <img
-          id="current-emoji" // Mantener ID si algún estilo lo usa
+          id="current-emoji"
           className="emoji-gif"
           src={emojiData.gif}
           alt={currentEmojiKey}
         />
       </div>
-      <button
-        id="tts-button" // Mantener ID si algún estilo lo usa
-        onClick={onToggleMute}
-        disabled={!ttsSupported}
-        className={isMuted ? 'muted' : ''}
-        title={
-          !ttsSupported
-            ? "Voz no soportada"
-            : isMuted
-              ? "Activar Voz"
-              : "Desactivar Voz"
-        }
-      >
-        <FontAwesomeIcon icon={!ttsSupported || isMuted ? faVolumeMute : faVolumeUp} />
-      </button>
     </div>
   );
 }

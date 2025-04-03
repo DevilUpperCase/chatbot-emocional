@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Message, TypingIndicator } from '../index';
 
-function ChatContainer({ messages, isTyping, highlightedWordInfo }) {
+function ChatContainer({ messages, isTyping }) {
   const chatEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -15,7 +15,7 @@ function ChatContainer({ messages, isTyping, highlightedWordInfo }) {
   return (
     <div className="chat-container">
       {messages.map((msg) => (
-        <Message key={msg.id} message={msg} highlightedWordInfo={highlightedWordInfo} />
+        <Message key={msg.id} message={msg} />
       ))}
       {isTyping && <TypingIndicator />}
       <div ref={chatEndRef} /> {/* Elemento invisible para hacer scroll */}

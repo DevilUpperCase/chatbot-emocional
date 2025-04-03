@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { synthesizeSpeech } from '../index';
 
 // URLs para la API HTTP (sin cambiar el endpoint original)
 const API_URLS = {
@@ -59,9 +58,6 @@ function useChatbotLogic() {
   const [messages, setMessages] = useState([]);
   const [currentEmojiKey, setCurrentEmojiKey] = useState('default');
   const [isTyping, setIsTyping] = useState(false);
-  const [isMuted, setIsMuted] = useState(() => localStorage.getItem('ttsMuted') === 'true');
-  const [ttsSupported, setTtsSupported] = useState(false);
-  const [highlightedWordInfo, setHighlightedWordInfo] = useState({ messageId: null, charIndex: -1 });
   const [isTestMode, setIsTestMode] = useState(false);
   const [connectionError, setConnectionError] = useState(false);
   const [serverHealthStatus, setServerHealthStatus] = useState({
@@ -72,14 +68,11 @@ function useChatbotLogic() {
   });
   
   // Referencias
-  const audioRef = useRef(null);
-  const ttsQueue = useRef([]);
-  const isPlayingTTS = useRef(false);
   const emojiDisplayTimer = useRef(null);
   const fetchControllers = useRef({});
   const fetchTimeouts = useRef({});
   const activeRequests = useRef(new Set());
-  const lastSentMessages = useRef({}); // Caché de mensajes enviados recientemente
+  const lastSentMessages = useRef({});
 
   // Función para actualizar el emoji temporalmente
   const showEmojiTemporarily = useCallback((emojiType, duration = 8000) => {
@@ -312,55 +305,7 @@ function useChatbotLogic() {
     }
   }, [isTestMode, updateServerHealth, serverHealthStatus.isHealthy]);
 
-  // Procesar la cola de TTS
-  const processTTSQueue = useCallback(() => {
-    if (isMuted || isPlayingTTS.current || ttsQueue.current.length === 0) {
-      return;
-    }
-
-    isPlayingTTS.current = true;
-    const { text, messageId } = ttsQueue.current.shift();
-
-    synthesizeSpeech(text)
-      .then(audioSrc => {
-        if (audioRef.current) {
-          audioRef.current.src = audioSrc;
-          audioRef.current.play().catch(e => console.error("Error playing audio:", e));
-
-          // Handle word highlighting during playback
-          const words = text.split(/\s+/);
-          let wordStartTime = 0;
-          let wordIndex = 0;
-
-          audioRef.current.ontimeupdate = () => {
-            if (audioRef.current && wordIndex < words.length) {
-              // Rough estimation based on average speech rate
-              const estimatedWordDuration = (audioRef.current.duration / words.length) * 1000;
-              if (audioRef.current.currentTime * 1000 >= wordStartTime) {
-                setHighlightedWordInfo({ 
-                  messageId, 
-                  charIndex: text.indexOf(words[wordIndex])
-                });
-                wordStartTime += estimatedWordDuration;
-                wordIndex++;
-              }
-            }
-          };
-        }
-      })
-      .catch(error => {
-        console.error("Error synthesizing speech:", error);
-      })
-      .finally(() => {
-        if (!audioRef.current) {
-          isPlayingTTS.current = false;
-          setHighlightedWordInfo({ messageId: null, charIndex: null });
-          processTTSQueue();
-        }
-      });
-  }, [isMuted]);
-
-  // Añadir mensaje al estado
+  // Función para añadir mensaje al estado
   const addMessage = useCallback((sender, text, files = [], status = 'sent', emoji = null) => {
     const messageId = generateUniqueId();
     const newMessage = {
@@ -378,14 +323,9 @@ function useChatbotLogic() {
     };
     
     setMessages(prev => [...prev, newMessage]);
-
-    if (sender === 'bot' && text && !isMuted && ttsSupported) {
-      ttsQueue.current.push({ text, messageId });
-      processTTSQueue();
-    }
-
+    
     return messageId;
-  }, [isMuted, ttsSupported, processTTSQueue]);
+  }, []);
 
   // Manejar respuestas del servidor
   const handleResponse = useCallback((response) => {
@@ -555,29 +495,6 @@ function useChatbotLogic() {
     });
   }, []);
 
-  // Alternar silencio
-  const handleToggleMute = useCallback(() => {
-    setIsMuted(prev => {
-      const newState = !prev;
-      localStorage.setItem('ttsMuted', newState.toString());
-      
-      if (newState && audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-        ttsQueue.current = [];
-        isPlayingTTS.current = false;
-        setHighlightedWordInfo({ messageId: null, charIndex: -1 });
-      }
-      
-      return newState;
-    });
-  }, []);
-
-  // Efecto: Verificar soporte de TTS
-  useEffect(() => {
-    setTtsSupported('speechSynthesis' in window);
-  }, []);
-
   // Efecto: Iniciar comprobación de conexión solo al principio
   useEffect(() => {
     // Función para verificar el estado del servidor
@@ -633,28 +550,6 @@ function useChatbotLogic() {
     // No establecemos ningún intervalo para evitar peticiones periódicas
   }, [isTestMode, connectionError, updateServerHealth]);
 
-  // Efecto: Manejar finalización de audio
-  useEffect(() => {
-    const handleAudioEnd = () => {
-      isPlayingTTS.current = false;
-      setHighlightedWordInfo({ messageId: null, charIndex: null });
-      processTTSQueue();
-    };
-
-    const audioElement = audioRef.current;
-    if (audioElement) {
-      audioElement.addEventListener('ended', handleAudioEnd);
-      audioElement.addEventListener('error', handleAudioEnd);
-    }
-
-    return () => {
-      if (audioElement) {
-        audioElement.removeEventListener('ended', handleAudioEnd);
-        audioElement.removeEventListener('error', handleAudioEnd);
-      }
-    };
-  }, [processTTSQueue]);
-
   // Efecto: Limpiar temporizadores y solicitudes pendientes al desmontar
   useEffect(() => {
     return () => {
@@ -680,17 +575,14 @@ function useChatbotLogic() {
 
   return {
     messages,
-    currentEmojiKey,
     isTyping,
-    isMuted,
-    ttsSupported,
-    highlightedWordInfo,
-    isTestMode,
+    currentEmojiKey,
     connectionError,
-    handleSendMessage,
-    handleToggleMute,
+    serverHealthStatus,
+    isTestMode,
     toggleTestMode,
-    audioRef
+    sendMessage: handleSendMessage,
+    clearMessages: () => setMessages([])
   };
 }
 
