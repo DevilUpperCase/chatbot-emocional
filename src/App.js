@@ -1,5 +1,6 @@
 import React from 'react'; // No necesitas useEffect aquí ahora
 import './App.css';
+import './styles/markdown.css'; // Importamos los estilos de markdown
 import { Header, ChatContainer, InputArea, useChatbotLogic } from './index';
 
 function App() {

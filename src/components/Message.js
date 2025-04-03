@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFilePdf, faFileAlt, faCheck, faCheckDouble } from '@fortawesome/free-solid-svg-icons';
+import ReactMarkdown from 'react-markdown';
 
 // Función auxiliar para obtener la hora actual
 const getCurrentTime = () => {
@@ -84,8 +85,8 @@ const Message = React.memo(({ message, highlightedWordInfo }) => {
       'gracioso': '😂',
       'gratitud': '🙏',
       'decepción': '😔',
-      'automatizado': '🤖',
-      'aprobación': '👍',
+      'procesando': '🤖',
+      'tarea hecha': '👍',
       'cariño': '😊',
       'asombro': '😲',
       'default': '🤔' // Emoji por defecto si no coincide con ninguno
@@ -191,31 +192,61 @@ const Message = React.memo(({ message, highlightedWordInfo }) => {
     
     if (isBot && messageParts) {
       // Mensaje de texto del bot (con posible resaltado)
-      return (
-        <div className="message-text">
-          {messageParts.map((part, index) => {
-            if (part.type === 'word') {
-              return (
-                <span
-                  key={index}
-                  className={`word ${index === highlightedIndex ? 'highlighted' : ''}`}
-                  data-char-index-original={part.charIndexOriginal}
-                >
-                  {part.text}
-                </span>
-              );
-            } else { // Es espacio o <br/>
-              // Usamos dangerouslySetInnerHTML para renderizar <br/> correctamente
-              return <span key={index} dangerouslySetInnerHTML={{ __html: part.text }} />;
-            }
-          })}
-        </div>
-      );
+      // Si tiene resaltado, usamos el sistema anterior para mantener esa funcionalidad
+      if (highlightedWordInfo && highlightedWordInfo.messageId === id) {
+        return (
+          <div className="message-text">
+            {messageParts.map((part, index) => {
+              if (part.type === 'word') {
+                return (
+                  <span
+                    key={index}
+                    className={`word ${index === highlightedIndex ? 'highlighted' : ''}`}
+                    data-char-index-original={part.charIndexOriginal}
+                  >
+                    {part.text}
+                  </span>
+                );
+              } else { // Es espacio o <br/>
+                // Usamos dangerouslySetInnerHTML para renderizar <br/> correctamente
+                return <span key={index} dangerouslySetInnerHTML={{ __html: part.text }} />;
+              }
+            })}
+          </div>
+        );
+      } else {
+        // Si no hay resaltado, usamos markdown
+        return (
+          <div className="message-text markdown-content">
+            <ReactMarkdown 
+              components={{
+                a: ({node, children, ...props}) => (
+                  <a {...props} target="_blank" rel="noopener noreferrer">
+                    {children}
+                  </a>
+                )
+              }}
+            >
+              {text}
+            </ReactMarkdown>
+          </div>
+        );
+      }
     } else {
-      // Mensajes de texto normales del usuario o tipo desconocido
+      // Mensajes de texto normales del usuario
       return (
         <div className="message-text">
-          <span dangerouslySetInnerHTML={{ __html: text.replace(/\n/g, '<br>') }} />
+          <ReactMarkdown 
+            components={{
+              a: ({node, children, ...props}) => (
+                <a {...props} target="_blank" rel="noopener noreferrer">
+                  {children}
+                </a>
+              )
+            }}
+          >
+            {text}
+          </ReactMarkdown>
         </div>
       );
     }

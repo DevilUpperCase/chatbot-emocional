@@ -1,0 +1,39 @@
+/* Estilos para el contenido de markdown */
+.markdown-content {
+  word-break: break-word;
+}
+
+/* Estilos para enlaces */
+.markdown-content a {
+  color: #0078d7;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.markdown-content a:hover {
+  color: #0056b3;
+}
+
+/* Estilos para texto en negrita (asteriscos) */
+.markdown-content strong {
+  font-weight: bold;
+}
+
+/* Estilos para listas */
+.markdown-content ul, .markdown-content ol {
+  padding-left: 20px;
+  margin: 10px 0;
+}
+
+.markdown-content li {
+  margin-bottom: 5px;
+}
+
+/* Ajustes para hacer que el estilo se integre bien con el chat */
+.markdown-content p {
+  margin: 0 0 10px 0;
+}
+
+.markdown-content p:last-child {
+  margin-bottom: 0;
+}
